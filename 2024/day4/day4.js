@@ -13,114 +13,215 @@ SAXAMASAAA
 MAMMMXMMMM
 MXMXAXMASX`;
 
-// returns the amount of time needle appears in haystack
-function lookupAppearances(haystack, needle) {
-    return haystack.split(needle).length - 1;
+const getNew2dMatrix = (w, h, fillWith = '') => {
+    return new Array(h).fill(null).map(() => new Array(w).fill(fillWith))
 }
 
-// lookup appearances both ways: straight and reversed
-function lookupAppearancesBothWays(haystack, needle) {
-    return lookupAppearances(haystack, needle) + lookupAppearances(haystack, needle.split(``).reverse().join(``));
-}
+function checkIfNeedleIsInMatrix(matrixNeedle, matrix, x, y) {
+    // create a helper function that receives a 2d needle matrix, a 2d mainMatrix and a [x, y] position
+    // returns whether or not given needle was found in mainMatrix at given position
+    // consider edge cases (out of bounds etc)
 
-function lookupFindAppearancesAllWays(input) {
-    // make input a 2d array of characters
-    const matrix = input.split(`\n`).map((row) => row.split(``));
+    // out of bounds
+    if (matrixNeedle[0].length + x > matrix[0].length || matrixNeedle.length + y > matrix.length) {
+        return false;
+    }
     
-    const needle = 'XMAS';
-    let appearances = 0;
-
-    // lookup horizontally – both ways
-    for (let i = 0; i < matrix.length; i++) {
-        const line = matrix[i].join(``);
-        appearances += lookupAppearancesBothWays(line, needle);
-    }
-
-    // lookup vertically – both ways
-    for (let i = 0; i < matrix[0].length; i++) {
-        const line = matrix.map((row) => row[i]).join(``);
-        appearances += lookupAppearancesBothWays(line, needle);
-    }
-
-    // skew matrix to lookup for diagonal appearances
-    // we are gonna make the example look like
-    // M---------
-    // MM--------
-    // ASM-------
-    // MMAS------
-    // XSXMX-----
-    // XMASXX----
-    // SXAMXMM---
-    // SMASAMSA--
-    // MASMASAMS-
-    // MAXMMMMASM
-    // -XMASXXSMA
-    // --MMMAXAMM
-    // ---XMASAMX
-    // ----AXSXMM
-    // -----XMASA
-    // ------MMAS
-    // -------AMA
-    // --------SM
-    // ---------X
-    // then like
-    // ---------M
-    // --------SA
-    // -------ASM
-    // ------MMMX
-    // -----XSAMM
-    // ----XMASMA
-    // ---SXMMAMS
-    // --MMXSXASA
-    // -MASAMXXAM
-    // MSXMAXSAMX
-    // MMASMASMS-
-    // ASAMSAMA--
-    // MMAMMXM---
-    // XXSAMX----
-    // XMXMA-----
-    // SAMX------
-    // SAM-------
-    // MX--------
-    // M---------
-    
-    const newMatrixHeight = matrix.length + matrix[0].length - 1;
-
-    const getNew2dMatrix = (w, h) => {
-        return new Array(h).fill(null).map(() => new Array(w).fill(`-`))
-    }
-
-    const rotatedMatrixClockWise = getNew2dMatrix(matrix[0].length, newMatrixHeight)
-    const rotatedMatrixAntiClockWise = getNew2dMatrix(matrix[0].length, newMatrixHeight)
-
-    const skew = (x = 0, y = 0, width = 0, dir = 1) => {
-        const newX = x;
-        const newY = (dir === -1 ? width : 0) + y + (x * dir);
-        return [newX, newY]
-    }
-
-    for (let y = 0; y < matrix.length; y++) {
-        for (let x = 0; x < matrix[0].length; x++) {
-            const [cwx, cwy] = skew(x, y, rotatedMatrixClockWise[0].length - 1, 1)
-            rotatedMatrixClockWise[cwy][cwx] = matrix[y][x];
-
-            const [acwx, acwy] = skew(x, y, rotatedMatrixClockWise[0].length - 1, -1)
-            rotatedMatrixAntiClockWise[acwy][acwx] = matrix[y][x];
+    for (let ny = 0; ny < matrixNeedle.length; ny++) {
+        for (let nx = 0; nx < matrixNeedle[0].length; nx++) {
+            if (matrixNeedle[ny][nx] !== null && matrixNeedle[ny][nx] !== matrix[y + ny][x + nx]) {
+                return false;
+            }
         }
     }
 
-    // lookup horizontally – both ways
-    for (let i = 0; i < rotatedMatrixClockWise.length; i++) {
-        const clockWiseLine = rotatedMatrixClockWise[i].join(``);
-        appearances += lookupAppearancesBothWays(clockWiseLine, needle);
+    return true;
+}
 
-        const antiClockWiseLine = rotatedMatrixAntiClockWise[i].join(``);
-        appearances += lookupAppearancesBothWays(antiClockWiseLine, needle);
-    }
+// function printMatrix(matrix) {
+//     console.log(matrix.map((row) => row.map(v => v ? v : '-').join(``)).join(`\n`));
+// }
 
+function lookupAppearancesInNeedles(input, needles) {
+    // make input a 2d matrix call it mainMatrix
+    const mainMatrix = input.split(`\n`).map((row) => row.split(``));    
+
+    // iterate over all vertices of mainMatrix looking for possible appearance of our needle matrix
+    // sum up the appearances
+
+    let appearances = 0;
+        
+    mainMatrix.forEach((row, y) => {
+        row.forEach((_, x) => {
+            needles.forEach((needle) => {
+                if (checkIfNeedleIsInMatrix(needle, mainMatrix, x, y)) {
+                    appearances++;
+                }
+            });
+        });
+    });
+
+    // return the sum
     return appearances;
 }
 
-console.log(lookupFindAppearancesAllWays(exampleInput)); // 18
-console.log(lookupFindAppearancesAllWays(input.trim()));
+function day4(input, needle = '') {
+    // compute possible needles in a 2d matrix: –\|/ and reverse
+    const mainNeedle = needle.split(``);
+    const mainNeedleReversed = mainNeedle.slice().reverse();
+    const needles = [];
 
+    // horizontal
+    const horizontal = getNew2dMatrix(mainNeedle.length, 1, null);
+    horizontal[0] = mainNeedle.slice(0);
+    needles.push(horizontal);
+
+    // horizontal reversed
+    const horizontalReversed = getNew2dMatrix(mainNeedle.length, 1, null);
+    horizontalReversed[0] = mainNeedleReversed.slice(0);
+    needles.push(horizontalReversed);
+
+    // diagonal up down
+    const diagonalUpDownNeedle = getNew2dMatrix(mainNeedle.length, mainNeedle.length, null);
+    diagonalUpDownNeedle.forEach((row, y) => {
+        row.forEach((_, x) => {
+            if (x === y) {
+                diagonalUpDownNeedle[y][x] = mainNeedle[x];
+            }
+        });
+    });
+    needles.push(diagonalUpDownNeedle);
+
+    // diagonal down up
+    const diagonalDownUpNeedle = getNew2dMatrix(mainNeedle.length, mainNeedle.length, null);
+    diagonalDownUpNeedle.forEach((row, y) => {
+        row.forEach((_, x) => {
+            if (x === y) {
+                diagonalDownUpNeedle[Math.abs(y - (mainNeedle.length - 1))][x] = mainNeedle[x];
+            }
+        });
+    });
+    needles.push(diagonalDownUpNeedle);
+
+    // vertical
+    const vertical = getNew2dMatrix(1, mainNeedle.length, null);
+    vertical.forEach((row, y) => {
+        row[0] = mainNeedle[y];
+    });
+    needles.push(vertical);
+
+    // diagonal up down reverse
+    const diagonalUpDownReversedNeedle = getNew2dMatrix(mainNeedle.length, mainNeedle.length, null);
+    diagonalUpDownReversedNeedle.forEach((row, y) => {
+        row.forEach((_, x) => {
+            if (x === y) {
+                diagonalUpDownReversedNeedle[y][x] = mainNeedleReversed[x];
+            }
+        });
+    });
+    needles.push(diagonalUpDownReversedNeedle);
+
+    // diagonal down up reverse
+    const diagonalDownUpReversedNeedle = getNew2dMatrix(mainNeedle.length, mainNeedle.length, null);
+    diagonalDownUpReversedNeedle.forEach((row, y) => {
+        row.forEach((_, x) => {
+            if (x === y) {
+                diagonalDownUpReversedNeedle[Math.abs(y - (mainNeedle.length - 1))][x] = mainNeedleReversed[x];
+            }
+        });
+    });
+    needles.push(diagonalDownUpReversedNeedle);
+
+    // vertical reverse
+    const verticalReversed = getNew2dMatrix(1, mainNeedle.length, null);
+    verticalReversed.forEach((row, y) => {
+        row[0] = mainNeedleReversed[y];
+    });
+    needles.push(verticalReversed);
+    
+    return lookupAppearancesInNeedles(input, needles);
+}
+
+function day4Part2(input, needle) {
+    // compute possible needles in a 2d matrix: –\|/ and reverse
+    const mainNeedle = needle.split(``);
+    const mainNeedleReversed = mainNeedle.slice().reverse();
+    const needlesToPermute = [];
+
+    // diagonal up down
+    const diagonalUpDownNeedle = getNew2dMatrix(mainNeedle.length, mainNeedle.length, null);
+    diagonalUpDownNeedle.forEach((row, y) => {
+        row.forEach((_, x) => {
+            if (x === y) {
+                diagonalUpDownNeedle[y][x] = mainNeedle[x];
+            }
+        });
+    });
+    needlesToPermute.push(diagonalUpDownNeedle);
+
+    // diagonal down up
+    const diagonalDownUpNeedle = getNew2dMatrix(mainNeedle.length, mainNeedle.length, null);
+    diagonalDownUpNeedle.forEach((row, y) => {
+        row.forEach((_, x) => {
+            if (x === y) {
+                diagonalDownUpNeedle[Math.abs(y - (mainNeedle.length - 1))][x] = mainNeedle[x];
+            }
+        });
+    });
+    needlesToPermute.push(diagonalDownUpNeedle);
+
+    // diagonal up down reverse
+    const diagonalUpDownReversedNeedle = getNew2dMatrix(mainNeedle.length, mainNeedle.length, null);
+    diagonalUpDownReversedNeedle.forEach((row, y) => {
+        row.forEach((_, x) => {
+            if (x === y) {
+                diagonalUpDownReversedNeedle[y][x] = mainNeedleReversed[x];
+            }
+        });
+    });
+    needlesToPermute.push(diagonalUpDownReversedNeedle);
+
+    // diagonal down up reverse
+    const diagonalDownUpReversedNeedle = getNew2dMatrix(mainNeedle.length, mainNeedle.length, null);
+    diagonalDownUpReversedNeedle.forEach((row, y) => {
+        row.forEach((_, x) => {
+            if (x === y) {
+                diagonalDownUpReversedNeedle[Math.abs(y - (mainNeedle.length - 1))][x] = mainNeedleReversed[x];
+            }
+        });
+    });
+    needlesToPermute.push(diagonalDownUpReversedNeedle);
+
+    const mergeMatrixes = (matrix1, matrix2) => {
+        const newMatrix = getNew2dMatrix(matrix1[0].length + matrix2[0].length, matrix1.length, null).map((_, i) => {
+            return matrix1[i].slice(0);
+        })
+        matrix2.forEach((row, y) => {
+            row.forEach((_, x) => {
+                if (matrix2[y][x] !== null) {
+                    newMatrix[y][x] = matrix2[y][x];
+                }
+            });
+        });
+        return newMatrix;
+    }
+
+    const needles = [];
+
+    for (let i = 0; i < needlesToPermute.length; i++) {
+        for (let j = i; j < needlesToPermute.length; j++) {
+            if (i !== j && (needlesToPermute[i][0][0] === null ^ needlesToPermute[j][0][0] === null)) {
+                const newMatrix = mergeMatrixes(needlesToPermute[i], needlesToPermute[j]);
+                needles.push(newMatrix);
+            }
+        }
+    }
+    
+    return lookupAppearancesInNeedles(input, needles);
+}
+
+console.log(day4(exampleInput, 'XMAS')); // 18
+console.log(day4(input.trim(), 'XMAS'));
+
+console.log(day4Part2(exampleInput, 'MAS')); // 18
+console.log(day4Part2(input, 'MAS')); // 18
